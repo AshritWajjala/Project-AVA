@@ -1,0 +1,16 @@
+[project]
+name = "buddy"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.129.0",
+    "fastembed>=0.7.4",
+    "langchain>=1.2.10",
+    "langchain-community>=0.4.1",
+    "langchain-ollama>=1.0.1",
+    "langgraph>=1.0.8",
+    "qdrant-client>=1.16.2",
+    "uvicorn>=0.41.0",
+]

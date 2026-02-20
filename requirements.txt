@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+langgraph
+langchain_ollama
+langchain
+langchain_community
+qdrant-client
+fastembed
