@@ -6,3 +6,9 @@ langchain
 langchain_community
 qdrant-client
 fastembed
+streamlit
+pandas
+google-genai
+langchain-groq
+langchain-openai
+langchain-huggingface

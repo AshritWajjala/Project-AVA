@@ -1,49 +1,51 @@
 # Project AVA 🌌
-**Advanced Virtual Assistant: Your Privacy-First Life OS**
+**Advanced Virtual Assistant: Your sidekick for a better day, every day.**
 
-Project AVA is a personal AI companion designed to bridge the gap between high-level reasoning and daily habit tracking. Built to run locally on an **RTX 5080**, AVA serves as a unified intelligence layer for fitness, journaling, and research, ensuring your data never leaves your machine.
-
----
-
-## 🚀 Vision
-AVA isn't just a chatbot; she is a **Life OS**. She transitions from a technical assistant to a personal health coach and researcher by integrating multiple data streams into a single, persistent state. 
-
-### Core Pillars:
-* **Privacy-First:** Powered by local LLMs (Ollama) to keep personal journals and health data private.
-* **Unified Context:** One brain for everything—your PC specs, your weight goals, and your academic research.
-* **Persistent Memory:** AVA remembers who you are across every session using advanced graph state persistence.
+Project AVA is a personal assistant designed to clear the mental clutter. It’s a simple, smart ecosystem for tracking my PPL gains, getting my thoughts down, and making sense of my research without breaking a sweat.
 
 ---
 
-## ✨ Features
-* 🧠 **Unified Reasoning Agent**: A single LangGraph-powered interface for all tasks.
-* ⚖️ **Fitness & Diet Tracker**: Structured SQLite-based tracking for weight loss (Goal: 112.4kg → 85kg).
-* 📖 **Semantic Journaling**: MongoDB-powered journaling with vector search for finding past reflections.
-* 📚 **Research Hub**: RAG-based document intelligence (PDFs, ArXiv, Web) using Qdrant and Pinecone.
-* ⚡ **High-Performance Backend**: Optimized for RTX 5080 with dual-model orchestration (Gemma 3 / DeepSeek).
+## 🚀 Why AVA?
+Life gets messy. AVA keeps it structured so I can focus on doing.
+
+* **🏋️ Gym & Gains:** No-nonsense tracking for my PPL split and the road to 85kg.
+* **✍️ Headspace:** A place to dump my thoughts and actually find them later.
+* **📖 Deep Dives:** A private researcher for my PDFs and the web.
+* **🤝 One Brain:** AVA knows my goals, my history, and my vibe.
+
+## 📅 Version Updates & Development Journal
+
+### **[Feb 20, 2026] - The Dynamic Form & AI Integration**
+* **Multi-Exercise Logger:** Implemented a dynamic "Plus/Minus" form system in Streamlit to log entire PPL sessions at once.
+* **State Management:** Solved the "Widget-State Lock" error using the **Callback Pattern** (`on_click`) to safely reset forms.
+* **Contextual RAG Bridge:** Created `get_ai_context()` in `sqlite_db.py` to feed structured weight and workout history into the LLM.
+* **AI "Brain" Client:** Set up the `google-genai` SDK with **Gemini 3 Flash** (2026 Stable Preview) to act as a contextual fitness coach.
+
+### **[Feb 18-19, 2026] - Foundation & Backend**
+* **Relational Schema:** Established SQLite tables for `fitness_logs` and `workout_logs`.
+* **Core Logic:** Built the Pydantic-based configuration and logging system.
+* **UI Prototype:** Initialized the Streamlit multi-tab interface for data entry and historical visualization.
 
 ---
 
 ## 🛠️ Tech Stack
-* **Orchestration:** [LangGraph](https://www.langchain.com/langgraph) (State management & Memory)
-* **LLM Engine:** [Ollama](https://ollama.com/) (Local) & [Groq](https://groq.com/) (Speed Fallback)
+* **Frontend:** [Streamlit](https://streamlit.io/)
+* **Orchestration:** [LangGraph](https://www.langchain.com/langgraph) (In-progress)
+* **LLM Engine:** [Gemini 3 Flash](https://aistudio.google.com/) (API-based Reasoning)
 * **Databases:**
-    * **Qdrant**: Long-term semantic memory (Vector)
     * **SQLite**: Structured fitness and diet logs (Relational)
-    * **MongoDB**: Flexible daily journaling (Document)
-* **API Layer:** FastAPI
-* **Frontend:** Streamlit (Coming Soon)
+    * **Qdrant/MongoDB**: (Planned for Journaling & Vector Memory)
+* **OS:** Pop!_OS (Linux)
 
 ---
 
 ## 📂 Project Structure
 ```text
-AVA/
+BUDDY/
 ├── app/
-│   ├── main.py          # Unified LangGraph assembly
-│   ├── core/            # App Configuration & Pydantic settings
-│   ├── database/        # Multi-DB Connection Factory
-│   └── tools/           # Specialist utilities (Fitness, Web Search)
-├── data/                # Local SQLite & Checkpoint storage
-├── .env                 # Secret management (API Keys)
-└── docker-compose.yml   # Infrastructure orchestration
+│   ├── main.py          # Streamlit UI & Tab Logic
+│   ├── core/            # Config, LLM Client, & Exceptions
+│   ├── database/        # SQLite DB Operations
+│   └── utils/           # Form reset & Helper functions
+├── data/                # Local .db storage
+└── .env                 # API Keys (Gemini)

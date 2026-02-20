@@ -20,5 +20,6 @@ data/
 # OS specific
 .DS_Store
 
-# ignore learn repo
+# ignore dicrectories
 learn/
+logs/
