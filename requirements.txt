@@ -1,14 +1,15 @@
 fastapi
 uvicorn
 langgraph
-langchain_ollama
 langchain
 langchain_community
 qdrant-client
 fastembed
 streamlit
 pandas
-google-genai
+langchain-google-genai
 langchain-groq
 langchain-openai
 langchain-huggingface
+langchain_ollama
+pymongo[srv]==3.12
