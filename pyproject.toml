@@ -16,10 +16,13 @@ dependencies = [
     "langchain-huggingface>=1.2.0",
     "langchain-ollama>=1.0.1",
     "langchain-openai>=1.1.10",
+    "langchain-qdrant>=1.1.0",
     "langgraph>=1.0.8",
     "pandas>=2.3.3",
     "pymongo[srv]==3.12",
+    "pypdf>=6.7.2",
     "qdrant-client>=1.16.2",
+    "sentence-transformers>=5.2.3",
     "streamlit>=1.54.0",
     "uvicorn>=0.41.0",
 ]

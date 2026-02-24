@@ -1,12 +1,12 @@
 from app.core.config import settings
-from google import genai
-from google.genai import types
-from app.database.sqlite_db import get_fitness_context, get_journal_context
 from app.core.prompts import SYSTEM_MODES
-from app.core.security_utils import get_safety_settings, sanitize_user_input
+from app.core.security_utils import sanitize_user_input
+from app.services.vector_engine import query_research
 from app.core.llm_factory import get_llm_client
+from app.database.mongodb import get_ava_context
 from langchain_classic.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from app.core.logger import logger, log_error_cleanly
 
     
 def get_ava_response(mode, user_input, provider, api_key):
@@ -26,18 +26,17 @@ def get_ava_response(mode, user_input, provider, api_key):
     mode_config = SYSTEM_MODES[mode]
     
     if mode_config["context_source"] == "fitness_db":
-        context = get_fitness_context() 
-        system_prompt = mode_config['instruction']
+        context = get_ava_context("fitness") 
     elif mode_config["context_source"] == "journal_db":
-        context = get_journal_context()
-        system_prompt = mode_config['instruction']
+        context = get_ava_context("journal")
     elif mode_config["context_source"] == "vector_store":
-        # Placeholder for Sunday's Vector/Research implementation
-        context = "Reference the uploaded research documents and PDFs."
-        system_prompt = mode_config['instruction']
+        context = query_research(question=safe_query)
     else:
-        context="N/A"
-        system_prompt = mode_config['instruction']
+        context="No specific data context needed."
+        
+    system_prompt = mode_config['instruction']
+    
+    logger.info("Retrieved context and system prompt")
     
     # 3. Check for "Empty Data" (Onboarding Logic)
     if not context:
@@ -45,24 +44,43 @@ def get_ava_response(mode, user_input, provider, api_key):
             yield mode_config["onboarding_ask"]
             return
     
-    # 4. Create the Chain
+
+    
+    user_message_format = """
+    <CONTEXT>
+    {context}
+    </CONTEXT>
+    
+    USER QUESTION: {user_query}
+    """
+    
+    # Creating prompt template
     prompt_template = ChatPromptTemplate.from_messages([
     ("system", "{system_instruction}"),
-    ("user", "CONTEXT FROM THE DATABASE: {user_context}\n\nUSER QUESTION: {user_query}")
+    ("user", user_message_format)
     ])
+    logger.info("Created Prompt Template")
     
+    # Defining LLM
     llm = get_llm_client(provider=provider, api_key=api_key)
+    logger.info(f"LLM Defined: {llm}")
     
-    chain = prompt_template | llm |StrOutputParser()
+    # 4. Create the Chain
+    chain = prompt_template | llm | StrOutputParser()
     
     try:
-        return chain.stream(
-            {
-                "system_instruction": system_prompt,
-                "user_context": context if context else "No context needed.",
-                "user_query": safe_query
-            }
-        )
+        # 1. Capture the stream
+        for chunk in chain.stream(
+                    {
+                        "system_instruction": system_prompt,
+                        "context": context,
+                        "user_query": safe_query
+                    }
+                ):
+            if chunk:
+                yield chunk
+            
+
     
     except Exception as e:
-        return f"⚠️ AVA Error: I encountered an issue processing that. ({str(e)})"
+        yield f"⚠️ AVA Error: I encountered an issue processing that. ({str(e)})"

@@ -5,6 +5,7 @@ class MySettings(BaseSettings):
     GROQ_API_KEY: str
     HF_TOKEN: str
     QDRANT_URL: str
+    QDRANT_PATH: str
     GEMINI_API_KEY: str
     
     # Base Info
@@ -20,6 +21,12 @@ class MySettings(BaseSettings):
     # MONGO_DB
     MONGODB_USER_NAME: str
     MONGODB_PASSWORD: str
+    
+    # models
+    OLLAMA_MODEL_NAME: str
+    OPENAI_MODEL_NAME: str
+    GROQ_MODEL_NAME: str
+    GOOGLE_GENAI_MODEL_NAME: str
     
     model_config = SettingsConfigDict(env_file=".env")
     

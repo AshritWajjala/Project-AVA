@@ -13,3 +13,7 @@ langchain-openai
 langchain-huggingface
 langchain_ollama
 pymongo[srv]==3.12
+qdrant-client
+pypdf
+langchain-qdrant
+sentence-transformers

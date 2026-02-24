@@ -1,14 +1,20 @@
 import streamlit as st
 from datetime import date
+import os
 # from app.database.sqlite_db import *
 from app.database.mongodb import add_mongo_log
 from app.utils.utils import *
 from app.core.llm import get_ava_response
 from app.core.prompts import SYSTEM_MODES
 from app.core.config import settings
+from app.services.vector_engine import index_pdf, clear_research_collection
+
+from app.core.logger import logger, log_error_cleanly
+
 
 # MUST BE FIRST
 st.set_page_config(page_title="AVA: Life OS", layout="wide", page_icon="🛡️")
+logger.info("Initiated AVA")
 
 # --- INITIALIZATION ---
 if "exercise_count" not in st.session_state:
@@ -21,6 +27,8 @@ if "fit_cals" not in st.session_state:
     st.session_state["fit_cals"] = int(settings.DAILY_CALORIE_GOAL)
 if "fit_prot" not in st.session_state:
     st.session_state["fit_prot"] = 0
+
+logger.info("Defined all session state variables.")
 
 # --- SIDEBAR: MODE SELECTOR & CONFIG ---
 st.sidebar.title("🛡️ Project AVA")
@@ -38,14 +46,23 @@ if app_mode == "AI Sidekick":
     
     # --- RESEARCH MODE UI ---
     if selected_ai_mode == "Research Mode":
+        logger.info("Selected Research mode.")
         st.sidebar.divider()
         st.sidebar.subheader("📚 Knowledge Base")
         uploaded_research = st.sidebar.file_uploader("Upload Research PDF", type="pdf")
         if uploaded_research:
+            temp_path = os.path.join("data", uploaded_research.name)
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_research.getbuffer())
             if st.sidebar.button("Index Document"):
-                # Placeholder for Task 3: Qdrant Indexing
-                st.sidebar.info("Indexing logic coming in Task 3!")
-    
+                with st.sidebar.status("Indexing... 🧠"):
+                    index_pdf(filepath=temp_path)
+                st.sidebar.success(f"Successfully indexed {uploaded_research.name}!") 
+                os.remove(temp_path)
+            if st.sidebar.button("🗑️ Clear Knowledge Base"):
+                msg = clear_research_collection()
+                st.sidebar.warning(msg)
+                
     # --- BRAIN CONFIGURATION ---
     st.sidebar.divider()
     st.sidebar.subheader("🧠 Brain Configuration")

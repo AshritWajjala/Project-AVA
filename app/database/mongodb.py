@@ -36,3 +36,20 @@ def add_mongo_log(log_type, data_dict):
 def get_mongo_history(log_type, limit=30):
     cursor = logs_collection.find({"type": log_type}).sort("timestamp", -1).limit(limit)
     return list(cursor)
+
+def get_ava_context(log_type, limit=5):
+    logs = get_mongo_history(log_type=log_type, limit=limit)
+    
+    if not logs:
+        return f"No recent {log_type} records found."
+    
+    context_lines = []
+    for log in logs:
+        date = log.get("date", "Unknown Date")
+        payload = log.get("payload", {})
+        context_lines.append(f"- [{date}]: {payload}")
+        
+    return "\n".join(context_lines)
+
+
+    
