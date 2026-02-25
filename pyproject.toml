@@ -18,6 +18,7 @@ dependencies = [
     "langchain-openai>=1.1.10",
     "langchain-qdrant>=1.1.0",
     "langgraph>=1.0.8",
+    "ollama>=0.6.1",
     "pandas>=2.3.3",
     "pymongo[srv]==3.12",
     "pypdf>=6.7.2",

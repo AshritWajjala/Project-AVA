@@ -1,10 +1,11 @@
 import streamlit as st
 from datetime import date
 import os
+import uuid
 # from app.database.sqlite_db import *
-from app.database.mongodb import add_mongo_log
+from app.database.mongodb import add_mongo_log, get_unique_sessions, get_session_messages
 from app.utils.utils import *
-from app.core.llm import get_ava_response
+from app.core.llm import get_ava_response, get_chat_title
 from app.core.prompts import SYSTEM_MODES
 from app.core.config import settings
 from app.services.vector_engine import index_pdf, clear_research_collection
@@ -27,6 +28,10 @@ if "fit_cals" not in st.session_state:
     st.session_state["fit_cals"] = int(settings.DAILY_CALORIE_GOAL)
 if "fit_prot" not in st.session_state:
     st.session_state["fit_prot"] = 0
+if "current_session_id" not in st.session_state:
+    st.session_state.current_session_id = str(uuid.uuid4()) # Unique ID for MongoDB grouping
+if "current_session_title" not in st.session_state:
+    st.session_state.current_session_title = "New Conversation"
 
 logger.info("Defined all session state variables.")
 
@@ -91,6 +96,31 @@ if app_mode == "AI Sidekick":
     st.sidebar.divider()
     if st.sidebar.button("Clear Conversation"):
         st.session_state.messages = []
+        st.rerun()
+        
+    # NEW: History Section (UI only for now, logic comes next)
+    st.sidebar.subheader("📜 History")
+    st.sidebar.caption(f"Active: {st.session_state.current_session_title}")
+
+    # Return all the session_ids of past conversations
+    past_sessions = get_unique_sessions()
+
+    # If there are no past conversations in the MongoDB
+    if not past_sessions:
+        st.sidebar.caption("No past conversations found.")
+    else:
+        for sess in past_sessions:
+            if st.sidebar.button(f"💬 {sess['title']}", key=sess['_id']):
+                st.session_state.session_id = sess['_id']
+                st.session_state.session_title = sess['title']
+                st.session_state.messages = get_session_messages(session_id=sess['_id'])
+                st.rerun()
+
+    # Create New Conversation
+    if st.sidebar.button("➕ New Chat", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.current_session_id = str(uuid.uuid4()) # Generate fresh ID
+        st.session_state.current_session_title = "New Conversation"
         st.rerun()
 
 st.sidebar.divider()
@@ -211,6 +241,9 @@ else: # AI SIDEKICK MODE
 
     if prompt := st.chat_input("Message AVA..."):
         # 1. Add user message to state and UI
+        if st.session_state.current_session_title == "New Conversation":
+            # Updating the chat title
+            st.session_state.session_title = get_chat_title(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -230,7 +263,9 @@ else: # AI SIDEKICK MODE
                             mode=selected_ai_mode, 
                             user_input=prompt,
                             provider=st.session_state.provider,
-                            api_key=st.session_state.api_key
+                            api_key=st.session_state.api_key,
+                            session_id=st.session_state.current_session_id,
+                            session_title=st.session_state.current_session_title
                         )
                     
                     # STREAMING MAGIC: This iterates through the generator automatically

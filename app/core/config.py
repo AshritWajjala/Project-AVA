@@ -27,6 +27,7 @@ class MySettings(BaseSettings):
     OPENAI_MODEL_NAME: str
     GROQ_MODEL_NAME: str
     GOOGLE_GENAI_MODEL_NAME: str
+    CHAT_TITLE_MODEL_NAME: str
     
     model_config = SettingsConfigDict(env_file=".env")
     

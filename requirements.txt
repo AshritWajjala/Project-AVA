@@ -17,3 +17,4 @@ qdrant-client
 pypdf
 langchain-qdrant
 sentence-transformers
+ollama
