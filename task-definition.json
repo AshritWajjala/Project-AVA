@@ -2,6 +2,9 @@
     "family": "ava-task",
     "networkMode": "awsvpc",
     "executionRoleArn": "arn:aws:iam::524390297205:role/ecsTaskExecutionRole",
+    "requiresCompatibilities": ["FARGATE"],
+    "cpu": "512",
+    "memory": "1024",
     "containerDefinitions": [
         {
             "name": "ava-container",
@@ -9,10 +12,15 @@
             "portMappings": [
                 { "containerPort": 8501, "hostPort": 8501, "protocol": "tcp" }
             ],
-            "essential": true
+            "essential": true,
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/ava-task",
+                    "awslogs-region": "ap-south-1",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            }
         }
-    ],
-    "requiresCompatibilities": ["FARGATE"],
-    "cpu": "512",
-    "memory": "1024"
+    ]
 }
