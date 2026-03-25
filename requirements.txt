@@ -18,3 +18,5 @@ pypdf
 langchain-qdrant
 sentence-transformers
 ollama
+pydantic
+ipykernel

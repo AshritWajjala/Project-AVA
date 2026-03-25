@@ -7,6 +7,7 @@ class MySettings(BaseSettings):
     QDRANT_URL: str
     QDRANT_PATH: str
     GEMINI_API_KEY: str
+    LANGCHAIN_API_KEY: str
     
     # Base Info
     USER_NAME: str
@@ -27,8 +28,12 @@ class MySettings(BaseSettings):
     OPENAI_MODEL_NAME: str
     GROQ_MODEL_NAME: str
     GOOGLE_GENAI_MODEL_NAME: str
-    CHAT_TITLE_MODEL_NAME: str
+    SMALL_OLLAMA_MODEL_NAME: str
+    
+    ENABLE_LOCAL_LLM: bool = False
     
     model_config = SettingsConfigDict(env_file=".env")
+    
+    
     
 settings = MySettings()

@@ -1,0 +1,17 @@
+{
+    "family": "ava-task",
+    "networkMode": "awsvpc",
+    "containerDefinitions": [
+        {
+            "name": "ava-container",
+            "image": "524390297205.dkr.ecr.ap-south-1.amazonaws.com/ashritw/project-ava:latest",
+            "portMappings": [
+                { "containerPort": 8501, "hostPort": 8501, "protocol": "tcp" }
+            ],
+            "essential": true
+        }
+    ],
+    "requiresCompatibilities": ["FARGATE"],
+    "cpu": "512",
+    "memory": "1024"
+}

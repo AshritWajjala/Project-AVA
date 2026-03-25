@@ -3,6 +3,7 @@ import sys
 import traceback
 from pathlib import Path
 from datetime import datetime
+import streamlit as st
 
 # 1. Create the 'logs' directory if it doesn't exist
 # This ensures the app doesn't crash because a folder is missing
@@ -17,26 +18,29 @@ LOG_FILE = LOG_DIR / f"{timestamp}.log"
 # 1. Define how the text should look (Time - Name - Level - Message)
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
+@st.cache_resource
 def get_logger(name: str):
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
+    
+    # Only add handler if not exixts (solution for streamlit-redundant_logs problem)
+    if not logger.handlers:
+        # 1. Terminal Handler (This shows text on your screen)
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter(LOG_FORMAT))
+        logger.addHandler(handler)
 
-    # 1. Terminal Handler (This shows text on your screen)
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    logger.addHandler(handler)
-
-    # 2. File Handler (This actually CREATES the .log file and writes to it)
-    file_handler = logging.FileHandler(LOG_FILE)
-    file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    logger.addHandler(file_handler)
+        # 2. File Handler (This actually CREATES the .log file and writes to it)
+        file_handler = logging.FileHandler(LOG_FILE)
+        file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+        logger.addHandler(file_handler)
 
     return logger
 
-# 3. Create a main logger for the app
+# Creating a main logger for the app
 logger = get_logger("AVA")
 
-# 2. This is the "Magic Function" for clean errors
+# function for clean errors
 def log_error_cleanly(exception: Exception):
     """Prints only the important stuff when something breaks."""
     # Get the details of where the error happened
@@ -47,7 +51,7 @@ def log_error_cleanly(exception: Exception):
     file_name = details.filename.split("/")[-1] # Just the file name, not the whole path
     line_number = details.lineno
     
-    # Print the clean version
+    # Prints the clean version
     logger.error(f"❌ [Error Type]: {type(exception).__name__}")
     logger.error(f"📍 [Location]: File '{file_name}', Line {line_number}")
     logger.error(f"💬 [Message]: {str(exception)}")

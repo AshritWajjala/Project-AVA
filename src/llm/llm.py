@@ -1,12 +1,13 @@
-from app.core.config import settings
-from app.core.prompts import SYSTEM_MODES
-from app.core.security_utils import sanitize_user_input
-from app.services.vector_engine import query_research
-from app.core.llm_factory import get_llm_client
-from app.database.mongodb import get_ava_context,save_chat_to_mongo
+from config.config import settings
+from src.prompt_engineering.prompts import SYSTEM_MODES
+from src.utils.security_utils import sanitize_user_input
+from src.services.vector_engine import query_research
+from src.utils.llm_utils import get_llm_client
+from src.database.mongodb import get_ava_context,save_chat_to_mongo
 from langchain_classic.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from app.core.logger import logger, log_error_cleanly
+from src.utils.logger import logger, log_error_cleanly
+import streamlit as st
 
     
 def get_ava_response(mode, user_input, session_id, session_title, provider, api_key):
@@ -14,33 +15,40 @@ def get_ava_response(mode, user_input, session_id, session_title, provider, api_
     Main entry point for AVA logic. Handles routing, context fetching, 
     and generating response.
     """
+    logger.info(f"Generating AVA response for mode: {mode} (Provider: {provider})")
     
     # 1. Sanitize the Input (Safety Layer)
     safe_query = sanitize_user_input(user_input)
     if "bypass my core safety" in safe_query:
+        logger.warning(f"Sanitization triggered for query: {user_input[:50]}...")
         return safe_query
     
     # Logs User Query
     save_chat_to_mongo(session_id, session_title, "user", safe_query)
 
     # 2. Dynamic Context Fetching (Routing)
-    # We fetch data only relevant to the current mode to save tokens and improve accuracy
     context = ""
     mode_config = SYSTEM_MODES[mode]
     
-    if mode_config["context_source"] == "fitness_db":
-        context = get_ava_context("fitness") 
-    elif mode_config["context_source"] == "journal_db":
-        context = get_ava_context("journal")
-    elif mode_config["context_source"] == "vector_store":
-        search_results = query_research(question=safe_query)
-        if search_results and "No relevant info found" not in search_results:
-            context = search_results
+    try:
+        if mode_config["context_source"] == "fitness_db":
+            context = get_ava_context("fitness") 
+        elif mode_config["context_source"] == "journal_db":
+            context = get_ava_context("journal")
+        elif mode_config["context_source"] == "vector_store":
+            search_results = query_research(question=safe_query)
+            if search_results and "No relevant info found" not in search_results:
+                context = search_results
+            else:
+                context = "No specific document context found for this query."
         else:
-            context = "No specific document context found for this query."
-    else:
-        context="No specific data context needed."
+            context="No specific data context needed."
         
+        logger.info(f"Context retrieval complete. Mode: {mode}")
+        
+    except Exception as e:
+        log_error_cleanly(e)
+        context = "Error Retrieving context."
         
     system_prompt = mode_config['instruction']
     
@@ -69,7 +77,6 @@ def get_ava_response(mode, user_input, session_id, session_title, provider, api_
     
     # Defining LLM
     llm = get_llm_client(provider=provider, api_key=api_key)
-    logger.info(f"LLM Defined: {llm}")
     
     # 4. Create the Chain
     chain = prompt_template | llm | StrOutputParser()
@@ -77,6 +84,8 @@ def get_ava_response(mode, user_input, session_id, session_title, provider, api_
     try:
         # 1. Capture the stream
         full_response = ""
+        logger.info(f"Streaming response from {provider}...")
+        
         for chunk in chain.stream(
                     {
                         "system_instruction": system_prompt,
@@ -93,9 +102,10 @@ def get_ava_response(mode, user_input, session_id, session_title, provider, api_
                            session_title=session_title, 
                            role="assistant",
                            content=full_response)
+        logger.info("Full response generated and saved to history.")
     
     except Exception as e:
-        yield f"⚠️ AVA Error: I encountered an issue processing that. ({str(e)})"
+        yield f"AVA Error: I encountered an issue processing that. Please check my logs."
         
 def get_chat_title(first_query):
     """Generates a title for the conversation based on user's first query
@@ -104,7 +114,10 @@ def get_chat_title(first_query):
         first_query (str): User's first query.
     """
     try:
-        llm = get_llm_client(provider="Ollama (Local)")
+        logger.info("Summarizing conversation for new title...")
+        provider = st.session_state.get("provider", "Groq") # Falls back to Groq if something breaks
+        api_key = st.session_state.get("api_key")
+        llm = get_llm_client(provider=provider, api_key=api_key)
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are a specialized summarizer. Create a 3-word title for the user's chat. Return ONLY the title words. No quotes, no intro."),
             ("user", "{query}")
@@ -112,9 +125,13 @@ def get_chat_title(first_query):
         
         chain = prompt | llm | StrOutputParser()
         
-        return chain.invoke({"query": first_query}).strip()
+        title = chain.invoke({"query": first_query}).strip()
+        
+        logger.info(f"Title generated: {title}")
+        
+        return title
         
     except Exception as e:
-        logger.warning("Error genrating chat title. Proceeding with first 25 characters. \nError: {e} ")
+        log_error_cleanly(e)
         # To continue application smoothly
         return first_query[:25] + '...'

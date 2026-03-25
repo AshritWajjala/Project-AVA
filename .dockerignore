@@ -1,0 +1,29 @@
+# Ignore the virtual environment (we reinstall via requirements.txt)
+.venv/
+venv/
+env/
+
+# Ignore git history
+.git/
+.gitignore
+
+# Ignore Python cache
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore local IDE settings
+.vscode/
+.idea/
+
+# Ignore local data/logs that don't need to be on AWS
+data/
+logs/
+learn/
+*.log
+
+# Ignore the Dockerfile itself and deployment scripts
+Dockerfile
+deploy.yml
+langgraph_tutorial2.ipynb
