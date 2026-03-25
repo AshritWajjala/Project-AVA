@@ -10,9 +10,36 @@
             "name": "ava-container",
             "image": "524390297205.dkr.ecr.ap-south-1.amazonaws.com/ashritw/project-ava:latest",
             "portMappings": [
-                { "containerPort": 8501, "hostPort": 8501, "protocol": "tcp" }
+                {
+                    "containerPort": 8501,
+                    "hostPort": 8501,
+                    "protocol": "tcp"
+                }
             ],
             "essential": true,
+            "secrets": [
+                { "name": "SQLITE_DB_PATH", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/SQLITE_DB_PATH" },
+                { "name": "GROQ_API_KEY", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/GROQ_API_KEY" },
+                { "name": "HF_TOKEN", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/HF_TOKEN" },
+                { "name": "QDRANT_URL", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/QDRANT_URL" },
+                { "name": "QDRANT_PATH", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/QDRANT_PATH" },
+                { "name": "GEMINI_API_KEY", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/GEMINI_API_KEY" },
+                { "name": "LANGCHAIN_API_KEY", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/LANGCHAIN_API_KEY" },
+                { "name": "USER_NAME", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/USER_NAME" },
+                { "name": "USER_NICKNAME", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/USER_NICKNAME" },
+                { "name": "DAILY_CALORIE_GOAL", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/DAILY_CALORIE_GOAL" },
+                { "name": "PROTEIN_GOAL", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/PROTEIN_GOAL" },
+                { "name": "CURRENT_WEIGHT", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/CURRENT_WEIGHT" },
+                { "name": "TARGET_WEIGHT", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/TARGET_WEIGHT" },
+                { "name": "MONGODB_USER_NAME", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/MONGODB_USER_NAME" },
+                { "name": "MONGODB_PASSWORD", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/MONGODB_PASSWORD" },
+                { "name": "OLLAMA_MODEL_NAME", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/OLLAMA_MODEL_NAME" },
+                { "name": "OPENAI_MODEL_NAME", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/OPENAI_MODEL_NAME" },
+                { "name": "GROQ_MODEL_NAME", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/GROQ_MODEL_NAME" },
+                { "name": "GOOGLE_GENAI_MODEL_NAME", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/GOOGLE_GENAI_MODEL_NAME" },
+                { "name": "SMALL_OLLAMA_MODEL_NAME", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/SMALL_OLLAMA_MODEL_NAME" },
+                { "name": "ENABLE_LOCAL_LLM", "valueFrom": "arn:aws:ssm:ap-south-1:524390297205:parameter/ava/prod/ENABLE_LOCAL_LLM" }
+            ],
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
