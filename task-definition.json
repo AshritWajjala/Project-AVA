@@ -1,6 +1,7 @@
 {
     "family": "ava-task",
     "networkMode": "awsvpc",
+    "executionRoleArn": "arn:aws:iam::524390297205:role/ecsTaskExecutionRole",
     "containerDefinitions": [
         {
             "name": "ava-container",
