@@ -6,99 +6,79 @@ from langchain_qdrant import QdrantVectorStore
 from config.config import settings
 from src.utils.logger import logger, log_error_cleanly
 
-# Initialize Embeddings
-logger.info("Loading HuggingFace Embeddings Model (all-MiniLM-L6-v2)...")
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2",
-                                   model_kwargs={'device': 'cpu'})
+# Initialize Embeddings (all-MiniLM-L6-v2 is perfect for Fargate CPUs)
+logger.info("Loading HuggingFace Embeddings Model...")
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_kwargs={'device': 'cpu'}
+)
 
-client = QdrantClient(url="http://127.0.0.1:6333")
+client = QdrantClient(
+    url=settings.QDRANT_URL, 
+    api_key=settings.HF_TOKEN # Use your secret key for cloud auth
+)
 
 def index_pdf(filepath, collection_name='research_papers'):
-    """Loads, splits, and embeds a PDF into the Qdrant vector store.
-
-    Args:
-        filepath (str): The path of the file
-        collection_name (str, optional): The name of the collection. Defaults to 'research_papers'.
-    """
-    logger.info(f"Starting indexing for file: {filepath}")
+    logger.info(f"Starting indexing: {filepath}")
     
     try:
         docs = PyPDFLoader(file_path=filepath).load()
-        logger.info(f"PDF loaded: {len(docs)} pages found.")
         
-        split_docs = RecursiveCharacterTextSplitter(chunk_size=1000, 
-                                                    chunk_overlap=100
-                                                    ).split_documents(documents=docs)
-        logger.info(f"Document split into {len(split_docs)} chunks.")
+        split_docs = RecursiveCharacterTextSplitter(
+            chunk_size=1000, 
+            chunk_overlap=100
+        ).split_documents(documents=docs)
         
-        # Create Vector Store
-        logger.info(f"Generating embeddings and saving to collection: {collection_name}...")
+        
+        for doc in split_docs:
+            doc.metadata["source"] = filepath.split("/")[-1]
+
         QdrantVectorStore.from_documents(
-                client=client,
-                embedding=embeddings, 
-                documents=split_docs,
-                path="./data/qdrant_db",
-                collection_name=collection_name,
-            )
-        logger.info("Indexing complete. Knowledge base updated.")
+            documents=split_docs,
+            embedding=embeddings,
+            url=settings.QDRANT_URL,
+            api_key=settings.HF_TOKEN,
+            collection_name=collection_name,
+            force_recreate=False # Appends to the library instead of wiping it
+        )
+        logger.info(f"Successfully indexed {len(split_docs)} chunks to {collection_name}")
         
     except Exception as e:
         log_error_cleanly(e)
-    
 
 def query_research(question, collection_name="research_papers"):
-    """Performs a similarity search in the vector store.
-
-    Args:
-        question (str): The query asked by the user.
-        collection_name (str, optional): The name of the collection. Defaults to "research_papers".
-
-    Returns:
-        context: Retrieves top 3 relevant documents.
-    """
-    logger.info(f"Searching research for: '{question[:50]}...'")
+    logger.info(f"Searching knowledge base for: '{question[:50]}'")
     
     try:
-        vector_store = QdrantVectorStore.from_existing_collection(
+        # 1. Check if collection exists first to avoid crashes
+        if not client.collection_exists(collection_name):
+            return "The technical library is empty. Please upload and index your resume first."
+
+        # 2. Use the client-based initialization (avoiding 'path')
+        vector_store = QdrantVectorStore(
             client=client,
+            collection_name=collection_name,
             embedding=embeddings,
-            path='./data/qdrant_db',
-            collection_name=collection_name
         )
         
-        # Returning top 3 results
         results = vector_store.similarity_search(query=question, k=3)
         
         if not results:
-            logger.warning("No relevant documents found in vector store.")
-            return "No relevant info found."
+            return "I searched the library but found no relevant details in the documents."
         
-        logger.info(f"Found {len(results)} relevant chunks.")
-        
-        # Combine results into one string for AVA's context
-        context = "\n\n".join([doc.page_content for doc in results])
-        
-        return context
+        return "\n\n".join([doc.page_content for doc in results])
     
     except Exception as e:
         log_error_cleanly(e)
-        return "Error querying research database."
+        return f"Technical library error: {str(e)}" # This will show you the REAL error in the UI
 
 def clear_research_collection(collection_name="research_papers"):
-    """Wipes out entire collection data
-
-    Args:
-        collection_name (str, optional): name of the collection. Defaults to "research_papers".
-    """
     try:
         if client.collection_exists(collection_name=collection_name):
             client.delete_collection(collection_name=collection_name)
-            logger.info(f"Collection '{collection_name}' deleted successfully.")
-            return f"Successfully cleared {collection_name}."
-        else:
-            logger.warning(f"Collection '{collection_name}' does not exist.")
-            return "Collection not found."
+            logger.info(f"Cleared collection: {collection_name}")
+            return f"Library {collection_name} cleared."
+        return "Library already empty."
     except Exception as e:
         log_error_cleanly(e)
         return "Failed to clear knowledge base."
-    

@@ -1,18 +1,100 @@
 import os
+import pickle
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 from datetime import datetime, UTC
 from config.config import settings
 from src.utils.logger import logger, log_error_cleanly
+from langgraph.checkpoint.base import BaseCheckpointSaver, Checkpoint, CheckpointTuple
+from typing import Any, Dict, Optional
 
-# 1. Initialization
+# Initialization
 # Using the URI structure you just verified
 uri = f"mongodb+srv://{settings.MONGODB_USER_NAME}:{settings.MONGODB_PASSWORD}@project-ava-main.r0tq155.mongodb.net/?appName=project-ava-main"
 client = MongoClient(uri, server_api=ServerApi('1'))
 db = client["ProjectAVA"]
 logs_collection = db["life_logs"]
 
-# 2. The Universal Logging Function
+class MongoCheckpointer(BaseCheckpointSaver):
+    """
+    Custom LangGraph checkpointer that persists agent state to MongoDB Atlas.
+    This ensures AVA remembers the conversation even if the AWS Fargate task restarts.
+    """
+    def __init__(self, client: MongoClient, db_name: str = "ProjectAVA"):
+        super().__init__()
+        self.client = client
+        self.db = client[db_name]
+        self.collection = self.db["agent_checkpoints"]
+
+    def get_tuple(self, config: Dict[str, Any]) -> Optional[CheckpointTuple]:
+        """Retrieves the latest state for a specific thread_id."""
+        thread_id = config["configurable"]["thread_id"]
+        try:
+            # Find the most recent checkpoint for this thread
+            doc = self.collection.find_one(
+                {"thread_id": thread_id}, 
+                sort=[("timestamp", -1)]
+            )
+            if doc:
+                checkpoint = pickle.loads(doc["checkpoint"])
+                return CheckpointTuple(
+                    config=config, 
+                    checkpoint=checkpoint, 
+                    metadata=doc.get("metadata", {}), 
+                    parent_config=None
+                )
+        except Exception as e:
+            logger.error(f"Error loading checkpoint: {e}")
+        return None
+
+    def put(self, config: Dict[str, Any], checkpoint: Checkpoint, metadata: Dict[str, Any], checkpoint_id: str) -> Dict[str, Any]:
+        """Saves the current agent state to MongoDB."""
+        thread_id = config["configurable"]["thread_id"]
+        try:
+            self.collection.insert_one({
+                "thread_id": thread_id,
+                "checkpoint_id": checkpoint_id, # Save the new ID
+                "checkpoint": pickle.dumps(checkpoint),
+                "metadata": metadata,
+                "timestamp": datetime.now(UTC)
+            })
+        except Exception as e:
+            logger.error(f"Error saving checkpoint: {e}")
+        
+        # We must return the config back to LangGraph
+        return {
+            "configurable": {
+                "thread_id": thread_id,
+                "checkpoint_id": checkpoint_id
+            }
+        }
+        
+    def put_writes(self, config: Dict[str, Any], writes: Any, task_id: str) -> None:
+        """
+        Satisfies the requirement for storing intermediate writes.
+        For Version 1.0.0, we can store these in a separate collection 
+        or simply pass to avoid the NotImplementedError.
+        """
+        thread_id = config["configurable"]["thread_id"]
+        checkpoint_id = config["configurable"]["checkpoint_id"]
+        
+        try:
+            writes_col = self.db["agent_writes"]
+            writes_col.insert_one({
+                "thread_id": thread_id,
+                "checkpoint_id": checkpoint_id,
+                "task_id": task_id,
+                "writes": pickle.dumps(writes),
+                "timestamp": datetime.now(UTC)
+            })
+        except Exception as e:
+            logger.error(f"Error saving writes: {e}")
+
+def get_mongo_checkpointer():
+    """Helper function to initialize the checkpointer."""
+    return MongoCheckpointer(client)
+
+# The Universal Logging Function
 def add_mongo_log(log_type, data_dict):
     """
     Saves any data (Fitness, Workout, Journal) to MongoDB.

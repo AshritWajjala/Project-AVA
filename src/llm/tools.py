@@ -8,9 +8,10 @@ from langgraph.prebuilt import tools_condition, ToolNode
 from config.config import settings
 from langgraph.checkpoint.memory import MemorySaver
 from datetime import datetime
-
-# Import your models
+from src.database.mongodb import get_mongo_checkpointer
 from src.models.logs import FitnessLog, WorkoutLog, JournalLog
+from src.prompt_engineering.prompts import AVA_MASTER_SYSTEM_PROMPT
+from langchain_core.messages import SystemMessage
 
 # 1. FITNESS TOOL
 @tool(args_schema=FitnessLog)
@@ -81,17 +82,35 @@ def save_journal_entry(content: str, mood: str, tags: list = []):
 @tool
 def search_technical_docs(query: str):
     """
-    Searches your local PDF library for AI, ML, or Programming answers.
+    Searches your personal PDF library for AI, ML, or Programming answers.
+    Use this tool when the user asks technical questions or asks about uploaded research.
     """
-    # Assuming query_research is imported
-    from src.services.vector_engine import query_research
-    results = query_research(query)
-    return f"Results from your technical library: {results}"
+    logger.info(f"Agent is triggering search_technical_docs with query: {query}")
+    
+    try:
+        results = query_research(query)
+        if not results or "No relevant info found" in results:
+             return "I checked the technical library but found no specific matches. Please ensure the document is indexed."
+        return f"Retrieved context from your technical library:\n\n{results}"
+    except Exception as e:
+        return f"I encountered an error accessing the library: {str(e)}"
+
+def call_model(state: MessagesState):
+    """
+    Executes the LLM with the unified system prompt and current message history.
+    """
+    # Inject the Master System Prompt at the beginning of the list
+    sys_msg = SystemMessage(content=AVA_MASTER_SYSTEM_PROMPT)
+    
+    # We pass the system message + all previous messages to the LLM
+    response = llm_with_tools.invoke([sys_msg] + state["messages"])
+    
+    return {"messages": [response]}
 
 # --- GRAPH ORCHESTRATION ---
 
 # Initialize Memory for Checkpointing
-memory = MemorySaver()
+memory = get_mongo_checkpointer()
 
 # Initialize Groq
 llm = ChatGroq(model="qwen/qwen3-32b", groq_api_key=settings.GROQ_API_KEY) 
@@ -100,11 +119,6 @@ tools = [log_fitness_activity, log_workout_session, save_journal_entry, search_t
 
 # Bind tools to the LLM
 llm_with_tools = llm.bind_tools(tools)
-
-# Define agent node
-def call_model(state: MessagesState):
-    response = llm_with_tools.invoke(state["messages"])
-    return {"messages": [response]}
 
 # Build the Graph
 builder = StateGraph(MessagesState)
@@ -115,11 +129,7 @@ builder.add_edge(START, "agent")
 builder.add_conditional_edges("agent", tools_condition) # Routes to tools or END
 builder.add_edge("tools", "agent")
 
-# Compile with INTERRUPT
-# This triggers the 'state.next' pause in Streamlit
+
 graph = builder.compile(checkpointer=memory, interrupt_before=["tools"])
-# user_query = "I just finished a Push day. I did 3 sets of Flat Bench for 10 reps at 80kg and 3 sets of Overhead Press of 12 reps and lifted 2.5 kg as that was the maximum load I took take for my shoulders :|."
-# inputs = {"messages": [("user", user_query)]}
-# for chunk in graph.stream(inputs, stream_mode="values"):
-#     chunk["messages"][-1].pretty_print()
+
     
