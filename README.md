@@ -5,6 +5,28 @@ Project AVA is a production-grade personal intelligence ecosystem designed to ce
 
 ---
 
+
+---
+
+## 📸 System Capabilities
+
+### 1. Research Intelligence (RAG)
+![Technical Document Summary](screenshots/doc_based_query.png)
+* **Technical Description:** This view showcases the RAG pipeline extracting hyperparameter specifics (Perplexity, BLEU scores) from a Transformer research paper. It demonstrates recursive text chunking and similarity search using `all-MiniLM-L6-v2` embeddings.*
+
+### 2. Human-in-the-Loop (HITL) Workflows
+![Workout Logging with Confirmation](screenshots/workout_log.png)
+* **Technical Description:** Displays multi-entity extraction where a complex sentence regarding sets and reps is mapped to nested Pydantic models for validated entry into the persistence layer.*
+
+### 3. Unified Life-Logging
+![Fitness & Nutrition Metrics](screenshots/fitness_log.png)
+* **Technical Description:** Illustrates real-time intent classification (Fitness vs. Chat), ensuring the correct tool logic is triggered for tracking weight, calories, and protein intake.*
+
+### 4. Cognitive Persistence
+![Journaling & Session History](screenshots/journal_log.png)
+* **Technical Description:** Highlights the implementation of long-term memory and auto-tagging logic for personal reflections, with state saved to a remote MongoDB cluster.*
+
+---
 ## System Architecture
 
 The application utilizes a stateless, serverless architecture optimized for scalability, security, and cost-efficiency within the AWS ecosystem.
